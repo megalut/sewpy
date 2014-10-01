@@ -29,6 +29,7 @@ The philosophy is the following:
 - When repeatedly calling run(), we avoid writing the SExtractor input files over and over again.
   Instead, param is written only once, and config settings are passed as command line arguments to the SExtractor executable, superseding the
   default config, which we take (if not told otherwise) as the output of "sextractor -d".
+  So to change config from image to image, simply edit se.config between calls of run().
 
 To do:
 
@@ -71,10 +72,6 @@ class SExtractorError(Exception):
 class SExtractor():
 	"""
 	Holds together all the settings to run SExtractor executable on one or several images.
-	
-	The public methods are just get_version and run
-	
-	
 	"""
 	
 	def __init__(self, workdir=None, sexpath="sex", params=None, config=None, configfilepath=None):
