@@ -49,6 +49,7 @@ The code for this module mixes elements inspired by:
 
 
 import os
+import shutil
 import astropy
 import subprocess
 import tempfile
@@ -70,6 +71,10 @@ class SExtractorError(Exception):
 class SExtractor():
 	"""
 	Holds together all the settings to run SExtractor executable on one or several images.
+	
+	The public methods are just get_version and run
+	
+	
 	"""
 	
 	def __init__(self, workdir=None, sexpath="sex", params=None, config=None, configfilepath=None):
@@ -90,25 +95,29 @@ class SExtractor():
 		SExtractor keys (PARAMETERS_NAME, FILTER_NAME, ...)
 		
 		"""
-	
-		# We set the workdir:
+
+		
+		# We set up the trivial things:
+		
+		self.sexpath = sexpath
+		self.configfilepath = configfilepath
+		
+		# ... and the workdir
 		
 		if workdir is not None:
 			self.workdir = workdir
 			self.tmp = False
 			if os.path.isdir(workdir):
-				logging.warning("SExtractor workdir '%s' exists, I might silently overwrite stuff" % (workdir))
+				logger.warning("SExtractor workdir '%s' exists, be careful! I will (maybe silently) delete or overwrite stuff." % (workdir))	
 			else:
-				logging.warning("Making new SExtractor workdir %s..." % (workdir))
+				logger.info("Making new SExtractor workdir '%s'..." % (workdir))
 				os.makedirs(workdir)
-			
 		else:
 			self.workdir = tempfile.mkdtemp(prefix='sextractor_dot_py_workdir_')
 			self.tmp = True
 		
-		# ... and the sexpath:
-		
-		self.sexpath = sexpath
+		self._clean_workdir()
+
 		
 		# ... and the params:
 		
@@ -119,18 +128,17 @@ class SExtractor():
 		self._check_params()
 			
 		
-		# ... and the config related stuff:
+		# ... and the config:
 		
 		if config == None:
 			self.config = defaultconfig
 		else:
 			self.config = config
 		
-		self.configfilepath = configfilepath
-	
 		self._set_instance_config() # Adds some fixed stuff to self.config
 		self._check_config()
 	
+		
 	
 	def get_version(self):
 		"""
@@ -161,12 +169,12 @@ class SExtractor():
 		"""
 		strange_param_helper = False
 		for param in self.params:
-			if param not in fullparamlist:
-				logging.warning("Parameter '%s' seems strange and might be unknown to SExtractor" % (param))
+			if param not in self.fullparamlist:
+				logger.warning("Parameter '%s' seems strange and might be unknown to SExtractor" % (param))
 				strange_param_helper = True
 				
 		if strange_param_helper:
-			logging.warning("Known parameters are: %s" % (fullparamtxt))
+			logger.warning("Known parameters are: %s" % (self.fullparamtxt))
 			
 	
 	def _check_config(self):
@@ -183,14 +191,19 @@ class SExtractor():
 		"""
 		
 		if "PARAMETERS_NAME" in self.config.keys():
-			logging.warning("OK, you specified your own PARAMETERS_NAME, I won't overwrite it")
+			logger.info("OK, you specified your own PARAMETERS_NAME, I will use it.")
 		else:
 			self.config["PARAMETERS_NAME"] = self._get_params_filepath()
 		
+		if "FILTER_NAME" in self.config.keys():
+			logger.info("You specified your own FILTER_NAME, I will use it.")
+		else:
+			self.config["FILTER_NAME"] = self._get_conv_filepath()
 		
-		self.config["CATALOG_NAME"] = self._get_cat_filepath()
 		
-		self.config["FILTER_NAME"] = self._get_conv_filepath()
+		if "CATALOG_NAME" in self.config.keys():
+			logger.critical("You specified your own CATALOG_NAME, but I will *NOT* use it !")
+			del self.config["CATALOG_NAME"]
 		
 
 	def _get_params_filepath(self):
@@ -219,19 +232,19 @@ class SExtractor():
 		"""
 		This changes from image to image
 		"""
-		return os.path.join(self.workdir, self.catfilename)
+		return os.path.join(self.workdir, imgname + ".cat.txt")
 	
 	def _get_assoc_filepath(self, imgname):
 		"""
 		Changes from image to image
 		"""
-		return os.path.join(self.workdir, "assoc.txt")
+		return os.path.join(self.workdir, imgname + ".assoc.txt")
 	
-	def _get_log_filepath(self):
+	def _get_log_filepath(self, imgname):
 		"""
 		Changes from image to image
 		"""
-		return os.path.join(self.workdir, "conv.txt")
+		return os.path.join(self.workdir, imgname + ".log.txt")
 	
 	
 	def _write_params(self, force=False):
@@ -278,12 +291,12 @@ class SExtractor():
 
 
 
-	def _write_default_conv(self, force=False):
+	def _write_default_conv(self):
 		"""
 		Writes the default convolution matrix, if needed.
 		"""
 		
-		if force or not os.path.exists(self._get_conv_filepath()):	
+		if not os.path.exists(self._get_conv_filepath()):	
 			f = open(self._get_conv_filepath(), 'w')
 			f.write("""CONV NORM
 # 3x3 ``all-ground'' convolution mask with FWHM = 2 pixels.
@@ -297,6 +310,16 @@ class SExtractor():
 
 
 
+	def _clean_workdir(self):
+		"""
+		Removes the config/param files related to this instance, to allow for a fresh restart.
+		Files related to specific images are not removed.
+		"""
+		toremove = [self._get_config_filepath(), self._get_params_filepath(), self._get_conv_filepath()]
+		for filepath in toremove:
+			if os.path.exists(filepath):	
+				logger.debug("Removing existing file %s..." % (filepath))
+				os.remove(filepath)
 
 
 	def write_assoc(cat, xname, yname):
@@ -304,75 +327,88 @@ class SExtractor():
 		Writes a plain text file which can be used as sextractor input for the ASSOC identification.
 		And "index" for each source is generated, it gets used to identify galaxies.
 		"""
-		
+		pass
 		
 		
 
-	def run(self, imgfilepath, catfilepath=None, log=True, assoccat=None, readcat=True, savelog=True):
+	def run(self, imgfilepath, assoccat=None, returncat=True, writelog=True):
 		"""
+		Runs SExtractor on a given image.
 		
-		:param imgfilepath: Path to the FITS image I should run on
-		:param catfilepath: Path of the catalog I should write. If None (default), I won't keep this catalog around.
-		:param readcat: By default I read the SExtractor catalog and return it as an astropy table. If set to False, I skip this step.
-		:param savelog: I save the sextractor input and output into a dedicated log file.
+		:param imgfilepath: Path to the input FITS image I should run on
+		:param assoccat:  input catalog (astropy table) which I should use for ASSOC
+		:param returncat: by default I read the SExtractor output catalog and return it as an astropy table.
+			If set to False, I return the path to the SExtractor catalog file instead.
+		:param writelog: if True I save the sextractor command line input and output into a dedicated log file in the workdir.
 		
-		:returns: the astropy table of the output catalog (unless readcat is False).
+		:returns: the astropy table of the output catalog, or, if returncat is False, the path to the output catalog file.
+		
+		Everything related to this particular image stays within this method, the SExtractor instance is not modified.
 		"""
 
 		starttime = datetime.now()
-		logging.info("Running SExtractor on %s..." % imgfilepath)
 		
-		# We set some 
-		
-		
-		# We write the input files
+		logging.info("Preparing to run SExtractor on %s..." % imgfilepath)
+
+		imgname = os.path.splitext(os.path.basename(imgfilepath))[0]
+				
+		# We write the input files (if needed)
 		self._write_default_config()
 		self._write_params()
 		self._write_default_conv()
 		
-		self.config["PARAMETERS_NAME"] = self._get_params_filepath()
+		# We build the command line arguments
+		popencmd = [self.sexpath, imgfilepath, "-c", self._get_config_filepath()]
 		
-		
-		self.config["CATALOG_NAME"] = self._get_cat_filepath()
-		
-		self.config["FILTER_NAME"] = self._get_conv_filepath()
-		
-		
-
-		popencmd = [self.sexpath, imgfilepath, "-c", self.get_config_filepath()]
+		# We add the current state of config
 		for (key, value) in self.config.items():
 			popencmd.append("-"+str(key))
 			popencmd.append(str(value))
+		
+		# We specify the output catalog name (*** without modifying config ***)
+		popencmd.extend(["-CATALOG_NAME", self._get_cat_filepath(imgname)])
+		if os.path.exists(self._get_cat_filepath(imgname)):
+			logger.warning("Output catalog %s already exists, I will overwrite it" % (self._get_cat_filepath(imgname)))
 			
-		logging.info("Running with command %s..." % (popencmd))
+		
+		# And we run
+		logger.debug("Running with command %s..." % (popencmd))
 		p = subprocess.Popen(popencmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		out, err = p.communicate()
 		
-		#print out
-		#print err
-		"""
-		if err != "":
-			logger.warning("Ouch, SExtractor complains :")
-			logger.warning(err)
-		"""
+		if writelog:
+			logfile = open(self._get_log_filepath(imgname), "w")
+			logfile.write("SExtractor was called with :\n")
+			logfile.write(" ".join(popencmd))
+			logfile.write("\n####### stdout #######\n")
+			logfile.write(out)
+			logfile.write("\n####### stderr #######\n")
+			logfile.write(err)
+			logfile.write("\n")
+			logfile.close()
+			
+		logger.info("SExtractor stderr:")
+		logger.info(err)
+		
+		if not "All done" in err:
+			logger.critical("Ouch, check SExtractor log")
 		
 		endtime = datetime.now()
 		logger.info("Done, it took %.2f seconds." % ((endtime - starttime).total_seconds()))
 
-		if readcat:
-			
-			cat = astropy.table.Table.read(self.get_cat_filepath(), format="ascii.sextractor")
+		if returncat:
+			cat = astropy.table.Table.read(self._get_cat_filepath(imgname), format="ascii.sextractor")
 			return cat
+		else:
+			return self._get_cat_filepath(imgname)
 		
 		
-	def delete(self):
-		"""
-		Removes the temporary working dir (but not a problem if you do not use this).
-		"""
-		if self.tmp:
-			if os.path.isdir(self.workdir):
-				os.remove(self.workdir)
-
+#	def destroy(self):
+#		"""
+#		Removes the complete working dir, careful with this.
+#		"""
+#		# No, this is way to dangerous, workdir could be "."
+#		#shutil.rmtree(self.workdir)
 
 
 	# Some class attributes:
