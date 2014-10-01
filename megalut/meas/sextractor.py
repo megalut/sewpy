@@ -377,7 +377,7 @@ class SExtractor():
 			logfile = open(self._get_log_filepath(imgname), "w")
 			logfile.write("SExtractor was called with :\n")
 			logfile.write(" ".join(popencmd))
-			logfile.write("\n####### stdout #######\n")
+			logfile.write("\n\n####### stdout #######\n")
 			logfile.write(out)
 			logfile.write("\n####### stderr #######\n")
 			logfile.write(err)
