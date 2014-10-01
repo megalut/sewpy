@@ -1,45 +1,49 @@
 """
 Yet another attempt to build a reusable and transparent SExtractor wrapper, this time
 
-- using only astropy (no more astroasciidata or pyfits)
+- using only astropy (no astroasciidata or pyfits)
 - using logging
-- using tempfile (if needed)
-- with support for ASSOC
+- using tempfile
+- with support for easy use of ASSOC
 - not only with MegaLUT in mind
 
-Several SExtractor wrappers for python can be found online, and the code for this module mixes elements inspired by:
 
-- previous MegaLUT, alipy, and cosmouline implementations
-- pysex from Nicolas Cantale
-- sextractor.py by Laurent Le Guillou (from the "forgotten" COSMOGRAIL pipeline)
-- pysextractor by Nicolas Gruel
-
-
-Minimal example::
+Here is the minimal example::
 
  from sextractor import SExtractor
  se = SExtractor()
  cat = se.run("myimage.fits")
  print cat
 
+As for every "wrapper", this code should ideally allow us to use SExtractor
+as if SExtractor would be a native python module. But at the same time we also want this wrapper to
+allow a more sophisticated use, with existing SExtractor input files, or revealing the output files.
+
 The philosophy is the following:
 
-- A SExtractor instance ("se" in the example above) is meant to be reused for different images
-  that you want to analyse with roughly the same settings.
-- These "permanent" settings can be given via the constructor.
-- When repeatedly calling run(), we avoid rewriting the SExtractor configuration files over and over again.
-  Instead, "non-permanent" settings (say the gain of each image, or the output catalog name) are passed as command line arguments.
-- Options should let you keep the catalog files, output images etc etc.
-
+- "params" (a list) refers to the features that you want SExtractor to measure (e.g., settings you find in "default.param").
+- "config" (a dict) refers to the settings (e.g., stuff you find in "default.sex").
+- A SExtractor instance ("se" in the example above) can well be reused for different images
+  that you want to analyse with the same params, but maybe different config.
+  Usually you don't want to change params from image to image anyway. But config might change (e.g., the gain, the seeing, ...).
+- When repeatedly calling run(), we avoid writing the SExtractor input files over and over again.
+  Instead, param is written only once, and config settings are passed as command line arguments to the SExtractor executable, superseding the
+  default config, which we take (if not told otherwise) as the output of "sextractor -d".
 
 To do:
 
-- clarify the above philosophy, find out how we want to use it
-- fix Exceptions
-- better handling of what files to keep and where
-- Do we need anything more to use ASSOC
-- option to log sextractor bla bla
-- delete / cleanup afterwards
+- implement raising Exceptions
+- give access to several conv and nnw settings (if needed)
+
+
+Note that several SExtractor wrappers for python can be found online.
+The code for this module mixes elements inspired by:
+
+- previous MegaLUT, alipy, and cosmouline implementations
+- pysex from Nicolas Cantale
+- sextractor.py by Laurent Le Guillou (from the "forgotten" COSMOGRAIL pipeline)
+- pysextractor by Nicolas Gruel
+
 
 """
 
@@ -65,50 +69,74 @@ class SExtractorError(Exception):
 
 class SExtractor():
 	"""
-	Holds together all the configuration and settings.
+	Holds together all the settings to run SExtractor executable on one or several images.
 	"""
 	
-	def __init__(self, workdir = None, sexpath="sex", params=None, config=None):
+	def __init__(self, workdir=None, sexpath="sex", params=None, config=None, configfilepath=None):
 		"""
 		All arguments have default values and are optional.
 		
-		:param workdir: where I'll write my *internal* files. If None, I create a temporary directory myself, usually in /tmp.
+		:param workdir: where I'll write my files. Specify this (e.g., "test") if you care about the output files.
+			If None, I create a unique temporary directory myself, usually in /tmp.
+			
 		:param sexpath: path to the sextractor executable (e.g., "sex" or "sextractor", if in your PATH)
-		:param params: the parameters you want SExtractor to measure (i.e., what you usually write in the "default.param" file).
-		:param config: special settings (overwrite the defaults from the usual "default.sex" file).
+		:param params: the parameters you want SExtractor to measure (i.e., what you would write in the "default.param" file)
+		:type params: list of strings
+		:param config: config settings that will supersede the default config (e.g., what you would change in the "default.sex" file)
+		:type config: dict
+		:param configfilepath: specify this if you want me to use an existing SExtractor config file as "default" (instead of the sextractor -d one)
+		
+		To use an existing SExtractor param-, conv-, or nnw-file, simply specify these in the config dict, using the appropriate
+		SExtractor keys (PARAMETERS_NAME, FILTER_NAME, ...)
 		
 		"""
 	
+		# We set the workdir:
+		
 		if workdir is not None:
 			self.workdir = workdir
 			self.tmp = False
+			if os.path.isdir(workdir):
+				logging.warning("SExtractor workdir '%s' exists, I might silently overwrite stuff" % (workdir))
+			else:
+				logging.warning("Making new SExtractor workdir %s..." % (workdir))
+				os.makedirs(workdir)
+			
 		else:
 			self.workdir = tempfile.mkdtemp(prefix='sextractor_dot_py_workdir_')
 			self.tmp = True
 		
+		# ... and the sexpath:
+		
 		self.sexpath = sexpath
+		
+		# ... and the params:
 		
 		if params == None:
 			self.params = defaultparams
 		else:
-			for param in params:
-				if param not in fullparamlist:
-					logging.warning("Parameter %s seems strange and might be unknown to SExtractor." % (param))
-					logging.warning("Known parameters are: %s" % (fullparamtxt))
-					
 			self.params = params
+		self._check_params()
 			
+		
+		# ... and the config related stuff:
+		
 		if config == None:
 			self.config = defaultconfig
 		else:
 			self.config = config
 		
-		self.catfilename = "test.cat" # That's the official SExtractor default.
-		
+		self.configfilepath = configfilepath
+	
+		self._set_instance_config() # Adds some fixed stuff to self.config
+		self._check_config()
+	
 	
 	def get_version(self):
 		"""
 		To find the SExtractor version, we call it without arguments and parse the stdout.
+		
+		:returns: a string (e.g. '2.4.4')
 		"""
 		p = subprocess.Popen([self.sexpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		out, err = p.communicate()
@@ -117,81 +145,197 @@ class SExtractor():
 		version = str(version_match.group()[8:])
 		assert len(version) != 0
 		return version
-		
+	
 	
 	def __str__(self):
+		"""
+		Trivial
+		"""
 		return "SExtractor in %s" % (self.workdir)
-		
+	
+	
+	def _check_params(self):
+		"""
+		Compares the params to a list of known params, and spits out a useful warning if
+		something seems fishy.
+		"""
+		strange_param_helper = False
+		for param in self.params:
+			if param not in fullparamlist:
+				logging.warning("Parameter '%s' seems strange and might be unknown to SExtractor" % (param))
+				strange_param_helper = True
+				
+		if strange_param_helper:
+			logging.warning("Known parameters are: %s" % (fullparamtxt))
 			
 	
-	def get_params_filepath(self):
+	def _check_config(self):
+		"""
+		Not yet implemented
+		"""
+		pass
+
+		
+	def _set_instance_config(self):
+		"""
+		Sets config parameters that remain fixed for this instance.
+		Called by __init__(). If needed, you could still mess with this config after __init__() has run.
+		"""
+		
+		if "PARAMETERS_NAME" in self.config.keys():
+			logging.warning("OK, you specified your own PARAMETERS_NAME, I won't overwrite it")
+		else:
+			self.config["PARAMETERS_NAME"] = self._get_params_filepath()
+		
+		
+		self.config["CATALOG_NAME"] = self._get_cat_filepath()
+		
+		self.config["FILTER_NAME"] = self._get_conv_filepath()
+		
+
+	def _get_params_filepath(self):
+		"""
+		Stays the same for a given instance.
+		"""
 		return os.path.join(self.workdir, "params.txt")
 		
-	def get_config_filepath(self):
-		return os.path.join(self.workdir, "config.txt")
+	def _get_config_filepath(self):
+		"""
+		Idem, stays the same for a given instance.
+		Might return the non-default configfilepath, if set.
+		"""
+		if self.configfilepath is None:
+			return os.path.join(self.workdir, "config.txt")
+		else:
+			return self.configfilepath
 
-	def get_conv_filepath(self):
+	def _get_conv_filepath(self):
+		"""
+		Stays the same for a given instance.
+		"""
 		return os.path.join(self.workdir, "conv.txt")
 	
-	def get_cat_filepath(self):
+	def _get_cat_filepath(self, imgname):
+		"""
+		This changes from image to image
+		"""
 		return os.path.join(self.workdir, self.catfilename)
 	
-	def _write_params(self):
+	def _get_assoc_filepath(self, imgname):
 		"""
-		Writes the parameters to the file
+		Changes from image to image
 		"""
-		f = open(self.get_params_filepath(), 'w')
-		f.write("\n".join(self.params))
-		f.write("\n")
-		f.close()
-		logger.debug("Wrote %s" % (self.get_params_filepath()))
+		return os.path.join(self.workdir, "assoc.txt")
+	
+	def _get_log_filepath(self):
+		"""
+		Changes from image to image
+		"""
+		return os.path.join(self.workdir, "conv.txt")
+	
+	
+	def _write_params(self, force=False):
+		"""
+		Writes the parameters to the file, if needed.
+		
+		:param force: if True, I overwrite any existing file.
+		"""
+		if force or not os.path.exists(self._get_params_filepath()):
+			f = open(self._get_params_filepath(), 'w')
+			f.write("\n".join(self.params))
+			f.write("\n")
+			f.close()
+			logger.debug("Wrote %s" % (self._get_params_filepath()))
+		else:
+			logger.debug("The params file already exists, I don't overwrite it.")
 
 
-	def _write_default_config(self):
-		p = subprocess.Popen([self.sexpath, "-d"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		out, err = p.communicate()
-		if err != "":
-			logger.warning("Ouch, SExtractor complains :")
-			logger.warning(err)
-		f = open(self.get_config_filepath(), 'w')
-		f.write(out)
-		f.close()
-		logger.debug("Wrote %s" % (self.get_config_filepath()))
+	def _write_default_config(self, force=False):
+		
+		"""
+		Writes the *default* config file, if needed.
+		I don't write this file if a specifig config file is set.
+		
+		:param force: if True, I overwrite any existing file.
+		"""
+		
+		if self.configfilepath is not None:
+			logger.debug("You use the existing config file %s, I don't have to write one." % (self._get_config_filepath()))
+			return
+		
+		if force or not os.path.exists(self._get_config_filepath()):	
+			p = subprocess.Popen([self.sexpath, "-d"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+			out, err = p.communicate()
+			if err != "":
+				logger.warning("Ouch, SExtractor complains :")
+				logger.warning(err)
+			f = open(self._get_config_filepath(), 'w')
+			f.write(out)
+			f.close()
+			logger.debug("Wrote %s" % (self._get_config_filepath()))
+		else:
+			logger.debug("Default config file already exists, I don't overwrite it.")
 
 
-	def _write_default_conv(self):
-		f = open(self.get_conv_filepath(), 'w')
-		f.write("""CONV NORM
+
+	def _write_default_conv(self, force=False):
+		"""
+		Writes the default convolution matrix, if needed.
+		"""
+		
+		if force or not os.path.exists(self._get_conv_filepath()):	
+			f = open(self._get_conv_filepath(), 'w')
+			f.write("""CONV NORM
 # 3x3 ``all-ground'' convolution mask with FWHM = 2 pixels.
 1 2 1
 2 4 2
 1 2 1""")
-		f.close()
-		logger.debug("Wrote %s" % (self.get_conv_filepath()))
+			f.close()
+			logger.debug("Wrote %s" % (self._get_conv_filepath()))
+		else:
+			logger.debug("Default conv file already exists, I don't overwrite it.")
 
+
+
+
+
+	def write_assoc(cat, xname, yname):
+		"""
+		Writes a plain text file which can be used as sextractor input for the ASSOC identification.
+		And "index" for each source is generated, it gets used to identify galaxies.
+		"""
+		
+		
 		
 
-	def run(self, imgfilepath, catfilepath=None, log=True, assoccat=None, readcat=True):
+	def run(self, imgfilepath, catfilepath=None, log=True, assoccat=None, readcat=True, savelog=True):
 		"""
+		
 		:param imgfilepath: Path to the FITS image I should run on
 		:param catfilepath: Path of the catalog I should write. If None (default), I won't keep this catalog around.
 		:param readcat: By default I read the SExtractor catalog and return it as an astropy table. If set to False, I skip this step.
+		:param savelog: I save the sextractor input and output into a dedicated log file.
 		
 		:returns: the astropy table of the output catalog (unless readcat is False).
 		"""
 
-		logging.info("Running SExtractor on %s..." % imgfilepath)
 		starttime = datetime.now()
+		logging.info("Running SExtractor on %s..." % imgfilepath)
 		
-		self._write_params()
-		self.config["PARAMETERS_NAME"] = self.get_params_filepath()
+		# We set some 
 		
+		
+		# We write the input files
 		self._write_default_config()
-		
-		self.config["CATALOG_NAME"] = self.get_cat_filepath()
-		
-		self.config["FILTER_NAME"] = self.get_conv_filepath()
+		self._write_params()
 		self._write_default_conv()
+		
+		self.config["PARAMETERS_NAME"] = self._get_params_filepath()
+		
+		
+		self.config["CATALOG_NAME"] = self._get_cat_filepath()
+		
+		self.config["FILTER_NAME"] = self._get_conv_filepath()
 		
 		
 
@@ -231,9 +375,9 @@ class SExtractor():
 
 
 
+	# Some class attributes:
 
-
-fullparamtxt = """
+	fullparamtxt = """
 #NUMBER                 Running object number                                     
 #EXT_NUMBER             FITS extension number                                     
 #FLUX_ISO               Isophotal flux                                             [count]
@@ -572,8 +716,6 @@ fullparamtxt = """
 #DISK_PATTERN_SPIRAL    Disk pattern spiral index  
 """
 
-# We turn this into a list of the parameter names:
-
-repattern = re.compile("#\w*\s")
-fullparamlist = map(lambda s: s[1:-1], repattern.findall(fullparamtxt))
+	# We turn this text block into a list of the parameter names:
+	fullparamlist = map(lambda s: s[1:-1], re.compile("#\w*\s").findall(fullparamtxt))
 
