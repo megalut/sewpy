@@ -15,12 +15,14 @@ Here is the minimal example::
  cat = se.run("myimage.fits")
  print cat
 
-As for every "wrapper", this code should ideally allow us to use SExtractor
-as if SExtractor would be a native python module. But at the same time we also want this wrapper to
-allow a more sophisticated use, with existing SExtractor input files, or revealing the output files.
+As for every "wrapper", this module should allow us to use SExtractor as if it would all be 
+native python. But at the same time we also want this wrapper to allow a more sophisticated use,
+with existing SExtractor input files, or revealing the output files.
 
 The philosophy is the following:
 
+- If you do not specify a workdir, I'll write all my required internal files somewhere in /tmp,
+  and you don't have to bother about this.
 - "params" (a list) refers to the features that you want SExtractor to measure
   (e.g., settings you find in "default.param").
 - "config" (a dict) refers to the settings (e.g., stuff you find in "default.sex").
@@ -37,7 +39,7 @@ The philosophy is the following:
 
 Latest improvements:
 
-- a log file is written for every run
+- a log file is written for every run()
 - filenames change according to FITS image file name where required
 - but you can also pass an "imgname" argument to run, and this will be used instead.
 - params and config files are written only once, as discussed
