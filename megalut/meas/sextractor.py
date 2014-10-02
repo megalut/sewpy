@@ -11,7 +11,7 @@ Yet another attempt to build a reusable and transparent SExtractor wrapper, this
 Here is the minimal example::
 
  from sextractor import SExtractor
- se = SExtractor()
+ se = SExtractor(params=["X_IMAGE", "Y_IMAGE"], config={"DETECT_MINAREA":10})
  cat = se.run("myimage.fits")
  print cat
 
@@ -21,19 +21,40 @@ allow a more sophisticated use, with existing SExtractor input files, or reveali
 
 The philosophy is the following:
 
-- "params" (a list) refers to the features that you want SExtractor to measure (e.g., settings you find in "default.param").
+- "params" (a list) refers to the features that you want SExtractor to measure
+  (e.g., settings you find in "default.param").
 - "config" (a dict) refers to the settings (e.g., stuff you find in "default.sex").
 - A SExtractor instance ("se" in the example above) can well be reused for different images
-  that you want to analyse with the same params, but maybe different config.
-  Usually you don't want to change params from image to image anyway. But config might change (e.g., the gain, the seeing, ...).
+  that you want to analyse with the same params but a different config.
+  Indeed you usually don't want to change params from image to image, but you might have to change
+  the config (e.g., gain, seeing, ...).
 - When repeatedly calling run(), we avoid writing the SExtractor input files over and over again.
-  Instead, param is written only once, and config settings are passed as command line arguments to the SExtractor executable, superseding the
-  default config, which we take (if not told otherwise) as the output of "sextractor -d".
+  Instead, param is written only once, and config settings are passed as command line arguments to
+  the SExtractor executable, superseding the default config, which we take (if not told otherwise)
+  as the output of "sextractor -d".
   So to change config from image to image, simply edit se.config between calls of run().
+
+
+Latest improvements:
+
+- a log file is written for every run
+- filenames change according to FITS image file name where required
+- but you can also pass an "imgname" argument to run, and this will be used instead.
+- params and config files are written only once, as discussed
+- appropriate warnings and behaviour when a workdir already exists, or when you rerun on the same file
+- possibility to use existing param / config / conv / nnw files
+- possibility to "nice" SExtractor
+- run() returns either the catalog, or the filepath to the catalog
+
 
 To do:
 
-- implement raising Exceptions
+- finish ASSOC
+- add a public way to get the filepaths to the output files
+- implement _check_config()
+- better detection of SExtractor failures
+- implement raising Exceptions when SExtractor fails
+- implement CHECK IMAGE
 - give access to several conv and nnw settings (if needed)
 
 
@@ -74,7 +95,7 @@ class SExtractor():
 	Holds together all the settings to run SExtractor executable on one or several images.
 	"""
 	
-	def __init__(self, workdir=None, sexpath="sex", params=None, config=None, configfilepath=None):
+	def __init__(self, workdir=None, sexpath="sex", params=None, config=None, configfilepath=None, nice=None):
 		"""
 		All arguments have default values and are optional.
 		
@@ -87,6 +108,7 @@ class SExtractor():
 		:param config: config settings that will supersede the default config (e.g., what you would change in the "default.sex" file)
 		:type config: dict
 		:param configfilepath: specify this if you want me to use an existing SExtractor config file as "default" (instead of the sextractor -d one)
+		:param nice: niceness with which I should run SExtractor
 		
 		To use an existing SExtractor param-, conv-, or nnw-file, simply specify these in the config dict, using the appropriate
 		SExtractor keys (PARAMETERS_NAME, FILTER_NAME, ...)
@@ -98,6 +120,7 @@ class SExtractor():
 		
 		self.sexpath = sexpath
 		self.configfilepath = configfilepath
+		self.nice = nice
 		
 		# ... and the workdir
 		
@@ -328,7 +351,7 @@ class SExtractor():
 		
 		
 
-	def run(self, imgfilepath, assoccat=None, returncat=True, writelog=True):
+	def run(self, imgfilepath, imgname=None, assoccat=None, returncat=True, writelog=True):
 		"""
 		Runs SExtractor on a given image.
 		
@@ -345,10 +368,12 @@ class SExtractor():
 
 		starttime = datetime.now()
 		
-		logging.info("Preparing to run SExtractor on %s..." % imgfilepath)
+		logger.info("Preparing to run SExtractor on %s..." % imgfilepath)
 
-		imgname = os.path.splitext(os.path.basename(imgfilepath))[0]
-				
+		if imgname == None:
+			imgname = os.path.splitext(os.path.basename(imgfilepath))[0]
+		logger.debug("Using imgname %s..." % (imgname))		
+		
 		# We write the input files (if needed)
 		self._write_default_config()
 		self._write_params()
@@ -356,6 +381,9 @@ class SExtractor():
 		
 		# We build the command line arguments
 		popencmd = [self.sexpath, imgfilepath, "-c", self._get_config_filepath()]
+		if self.nice != None: # We prepend the nice command
+			popencmd[:0] = ["nice", "-n", str(self.nice)]
+		
 		
 		# We add the current state of config
 		for (key, value) in self.config.items():
