@@ -38,12 +38,23 @@ The philosophy is the following:
   the SExtractor executable, superseding the default config, which we take (if not told otherwise)
   as the output of "sextractor -d".
   So to change config from image to image, simply edit se.config between calls of run().
+- There is special helper functionality for using ASSOC.
 
 
 .. warning:: When using params resulting in multiple columns (such as "FLUX_RADIUS(3)" above),
 	do not put these in the last position of the params list, otherwise astropy fails reading
 	the catalog!
 
+
+.. note:: 
+		
+		   How to use the ASSOC helper:
+		   
+		   - Add "VECTOR_ASSOC(3)" to your params (and not at the end of the params list).
+		   - Add for instance {"ASSOC_RADIUS":10.0, "ASSOC_TYPE":"NEAREST"} to your config.
+		   - give the relavant arguments (cat, xname, yname) when calling run().
+		
+		
 Recent improvements (latest on top):
 
 - now also works with vector parameters such as MAG_APER(4)
@@ -60,7 +71,7 @@ Recent improvements (latest on top):
 To do:
 
 - finish ASSOC
-- add a public way to get the filepaths to the output files
+- add a public way to get the filepaths to the output files ?
 - implement _check_config()
 - better detection of SExtractor failures
 - implement raising Exceptions when SExtractor fails
@@ -86,6 +97,7 @@ import astropy
 import subprocess
 import tempfile
 import re
+import copy
 from datetime import datetime
 
 import logging
@@ -361,28 +373,48 @@ class SExtractor():
 				os.remove(filepath)
 
 
-	def write_assoc(cat, xname, yname):
+	def _write_assoc(self, cat, xname, yname, imgname):
 		"""
 		Writes a plain text file which can be used as sextractor input for the ASSOC identification.
 		And "index" for each source is generated, it gets used to identify galaxies.
 		"""
-		pass
 		
+		#if assoc_xname not in assoc_cat.colnames or assoc_yname not in assoc_cat.colnames:
+		#	raise RuntimeError("I don't have columns %s or %s" % (assoc_xname, assoc_yname))
+		
+		if os.path.exists(self._get_assoc_filepath(imgname)):	
+			logger.warning("ASSOC file already exists, I will overwrite it")
+
+		lines = []
+		for (number, row) in enumerate(cat):
+			lines.append("%.3f\t%.3f\t%i\n" % (row[xname], row[yname], number))
+
+		lines = "".join(lines)
+		f = open(self._get_assoc_filepath(imgname), "w")
+		f.writelines(lines)
+		f.close()
+		logger.debug("Wrote ASSOC file %s..." % (self._get_assoc_filepath(imgname)))
+
 		
 
-	def run(self, imgfilepath, imgname=None, assoccat=None, returncat=True, writelog=True):
+	def run(self, imgfilepath, imgname=None, assoc_cat=None, assoc_xname="x", assoc_yname="y", returncat=True, writelog=True):
 		"""
 		Runs SExtractor on a given image.
 		
 		:param imgfilepath: Path to the input FITS image I should run on
-		:param assoccat:  input catalog (astropy table) which I should use for ASSOC
+		:param assoc_cat:  optional input catalog (astropy table), if you want to use the ASSOC helper
+		:param assoc_xname: x coordinate name I should use in the ASSOC helper
+		:param assoc_yname: idem
+		
 		:param returncat: by default I read the SExtractor output catalog and return it as an astropy table.
 			If set to False, I return the path to the SExtractor catalog file instead.
 		:param writelog: if True I save the sextractor command line input and output into a dedicated log file in the workdir.
 		
 		:returns: the astropy table of the output catalog, or, if returncat is False, the path to the output catalog file.
 		
-		Everything related to this particular image stays within this method, the SExtractor instance is not modified.
+		
+		Everything related to this particular image stays within this method, the SExtractor instance
+		(in particular config) is not modified !
 		"""
 
 		starttime = datetime.now()
@@ -392,6 +424,39 @@ class SExtractor():
 		if imgname == None:
 			imgname = os.path.splitext(os.path.basename(imgfilepath))[0]
 		logger.debug("Using imgname %s..." % (imgname))		
+		
+		# We make a deep copy of the config, that we can modify with settings related to this particular image.
+		imgconfig = copy.deepcopy(self.config)
+		
+		# We set the catalog name :
+		imgconfig["CATALOG_NAME"] = self._get_cat_filepath(imgname)
+		if os.path.exists(self._get_cat_filepath(imgname)):
+			logger.warning("Output catalog %s already exists, I will overwrite it" % (self._get_cat_filepath(imgname)))
+		
+		
+		# We prepare the ASSOC catalog file, if needed
+		if assoc_cat is not None:
+			
+			logger.info("I will run in ASSOC mode")	
+			if "VECTOR_ASSOC(3)" not in self.params:
+				raise RuntimeError("To use the ASSOC helper, you have to add 'VECTOR_ASSOC(3)' to the params")
+			if assoc_xname not in assoc_cat.colnames or assoc_yname not in assoc_cat.colnames:
+				raise RuntimeError("I don't have columns %s or %s" % (assoc_xname, assoc_yname))
+			self._write_assoc(cat=assoc_cat, xname=assoc_xname, yname=assoc_yname, imgname=imgname)
+		
+			imgconfig["ASSOC_DATA"] = "1, 2, 3"
+			imgconfig["ASSOC_NAME"] = self._get_assoc_filepath(imgname)
+			imgconfig["ASSOC_PARAMS"] = "1, 2"
+			if "ASSOC_RADIUS" not in imgconfig:
+				logger.warning("ASSOC_RADIUS not specified, using a default of 10.0")
+				imgconfig["ASSOC_RADIUS"] = 10.0
+			if "ASSOC_TYPE" not in imgconfig:
+				logger.warning("ASSOC_TYPE not specified, using a default NEAREST")
+				imgconfig["ASSOC_TYPE"] = "NEAREST"
+			if "ASSOCSELEC_TYPE" in imgconfig:
+				raise RuntimeError("Sorry, you cannot mess with ASSOCSELEC_TYPE yourself when usign the helper. I'm using MATCHED.")
+			imgconfig["ASSOCSELEC_TYPE"] = "MATCHED"
+
 		
 		# We write the input files (if needed)
 		self._write_default_config()
@@ -403,17 +468,10 @@ class SExtractor():
 		if self.nice != None: # We prepend the nice command
 			popencmd[:0] = ["nice", "-n", str(self.nice)]
 		
-		
 		# We add the current state of config
-		for (key, value) in self.config.items():
+		for (key, value) in imgconfig.items():
 			popencmd.append("-"+str(key))
 			popencmd.append(str(value))
-		
-		# We specify the output catalog name (*** without modifying config ***)
-		popencmd.extend(["-CATALOG_NAME", self._get_cat_filepath(imgname)])
-		if os.path.exists(self._get_cat_filepath(imgname)):
-			logger.warning("Output catalog %s already exists, I will overwrite it" % (self._get_cat_filepath(imgname)))
-			
 		
 		# And we run
 		logger.debug("Running with command %s..." % (popencmd))
@@ -424,6 +482,8 @@ class SExtractor():
 			logfile = open(self._get_log_filepath(imgname), "w")
 			logfile.write("SExtractor was called with :\n")
 			logfile.write(" ".join(popencmd))
+			logfile.write("\n\nA nicer view of the config:\n")
+			logfile.write("\n".join(["%30s : %30s" % (str(key), str(value)) for (key, value) in imgconfig.items()]))
 			logfile.write("\n\n####### stdout #######\n")
 			logfile.write(out)
 			logfile.write("\n####### stderr #######\n")
@@ -440,11 +500,19 @@ class SExtractor():
 		endtime = datetime.now()
 		logger.info("Done, it took %.2f seconds." % ((endtime - starttime).total_seconds()))
 
-		if returncat:
-			cat = astropy.table.Table.read(self._get_cat_filepath(imgname), format="ascii.sextractor")
-			return cat
-		else:
+		
+		# And we read the output:
+		if not returncat:
 			return self._get_cat_filepath(imgname)
+		else:
+			if assoc_cat is None:
+				cat = astropy.table.Table.read(self._get_cat_filepath(imgname), format="ascii.sextractor")
+				return cat
+			else: # We have to process the output catalog, merging it.
+			
+				print "impleent me"
+			
+			
 		
 		
 #	def destroy(self):
