@@ -8,10 +8,13 @@ Yet another attempt to build a reusable and transparent SExtractor wrapper, this
 - not only with MegaLUT in mind
 
 
-Here is the minimal example::
+Here is an illustrative example::
 
  from sextractor import SExtractor
- se = SExtractor(params=["X_IMAGE", "Y_IMAGE"], config={"DETECT_MINAREA":10})
+ se = SExtractor(
+ 	params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"],
+	config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"}
+	)
  cat = se.run("myimage.fits")
  print cat
 
@@ -37,15 +40,20 @@ The philosophy is the following:
   So to change config from image to image, simply edit se.config between calls of run().
 
 
-Latest improvements:
+.. warning:: When using params resulting in multiple columns (such as "FLUX_RADIUS(3)" above),
+	do not put these in the last position of the params list, otherwise astropy fails reading
+	the catalog!
 
-- a log file is written for every run()
+Recent improvements (latest on top):
+
+- now also works with vector parameters such as MAG_APER(4)
+- possibility to "nice" SExtractor
+- a log file is written for every run() if not told otherwise
 - filenames change according to FITS image file name where required
 - but you can also pass an "imgname" argument to run, and this will be used instead.
 - params and config files are written only once, as discussed
 - appropriate warnings and behaviour when a workdir already exists, or when you rerun on the same file
 - possibility to use existing param / config / conv / nnw files
-- possibility to "nice" SExtractor
 - run() returns either the catalog, or the filepath to the catalog
 
 
@@ -191,7 +199,16 @@ class SExtractor():
 		"""
 		strange_param_helper = False
 		for param in self.params:
-			if param not in self.fullparamlist:
+		
+			# It could be that the param encapsulates several values (e.g., "FLUX_RADIUS(10)")
+			# So we have to dissect this
+			match = re.compile("(\w*)\(\d*\)").match(param)
+			if match:
+				cleanparam = match.group(1)
+			else:
+				cleanparam = param
+				
+			if cleanparam not in self.fullparamlist:
 				logger.warning("Parameter '%s' seems strange and might be unknown to SExtractor" % (param))
 				strange_param_helper = True
 				
