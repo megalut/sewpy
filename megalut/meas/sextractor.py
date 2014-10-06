@@ -42,9 +42,9 @@ The philosophy is the following:
 - There is special helper functionality for using ASSOC (see note below)
 
 
-.. warning:: When using params resulting in multiple columns (such as "FLUX_RADIUS(3)" above),
-	do not put these in the last position of the params list, otherwise astropy fails reading
-	the catalog!
+.. warning:: When using *vector*-type params resulting in multiple columns (such as "FLUX_RADIUS(3)"
+	in the example above), do not put these in the last position of the params list, otherwise astropy
+	fails reading the catalog!
 
 
 .. note:: 
