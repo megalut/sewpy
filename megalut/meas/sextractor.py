@@ -48,21 +48,26 @@ The philosophy is the following:
 
 
 .. note:: 
+		   
+		The **ASSOC helper** assists you in measuring galaxies from an existing input catalog,
+		instead of just making a new catalog of all sources. In summary, you pass an existing input
+		catalog to run(), and you'll get this same catalog as output, but with the new colums corresponding to the
+		SExtractor params appended.
 		
-		   How to use the ASSOC helper:
+		To use the ASSOC helper:
+
+		- Add "VECTOR_ASSOC(3)" to your params (at the beginning, not at the end, of the params list).
+		- Add for instance {"ASSOC_RADIUS":10.0, "ASSOC_TYPE":"NEAREST"} to your config.
+		  These values are the defaults used if you don't specify anything.
+		- give the relevant arguments (assoc_cat, assoc_xname, assoc_yname) when calling run().
 		   
-		   - Add "VECTOR_ASSOC(3)" to your params (at the beginning, not at the end, of the params list).
-		   - Add for instance {"ASSOC_RADIUS":10.0, "ASSOC_TYPE":"NEAREST"} to your config.
-		     These values are the defaults used if you don't specify anything.
-		   - give the relavant arguments (assoc_cat, assoc_xname, assoc_yname) when calling run().
-		   
-		   The output of run() will contain an astropy table, with the same rows as assoc_cat, but 
-		   to which the new SExtractor columns will be appended.
-		   Those SExtractor columns might be **masked** columns (leading to a masked table),
-		   as some of your sources might not have been found by SExtractor.
-		   Note that the attribute mytable.masked tells you if an astropy table "mytable" is masked.
-		   To make it even more foolproof, I systematically add a boolean column named
-		   prefix + "assoc_flag". True means that the source was found.
+		The output of run() will contain an astropy table, with the same rows as assoc_cat, but 
+		to which the new SExtractor columns will be appended.
+		Those SExtractor columns might be **masked** columns (leading to a masked table),
+		as some of your sources might not have been found by SExtractor.
+		Note that the attribute mytable.masked tells you if an astropy table "mytable" is masked.
+		To make it even more foolproof, I systematically add a boolean column named
+		prefix + "assoc_flag". True means that the source was found.
 		
 		
 Recent improvements (latest on top):
