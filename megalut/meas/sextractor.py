@@ -16,7 +16,7 @@ Here is an illustrative example::
 	config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"}
 	)
  out = se.run("myimage.fits")
- print out["table"] # out["table"] is an astropy table.
+ print out["table"] # this is an astropy table.
 
 The primary aim of this module is to allow us to use SExtractor as if it would all just be 
 native python, without having to care about input and output files.
@@ -56,11 +56,11 @@ The philosophy is the following:
 		     These values are the defaults used if you don't specify anything.
 		   - give the relavant arguments (assoc_cat, assoc_xname, assoc_yname) when calling run().
 		   
-		   The output of run() will contain an astropy table, with exactly the same rows as assoc_cat, but 
+		   The output of run() will contain an astropy table, with the same rows as assoc_cat, but 
 		   to which the new SExtractor columns will be appended.
 		   Those SExtractor columns might be **masked** columns (leading to a masked table),
 		   as some of your sources might not have been found by SExtractor.
-		   Note that the attribute mytable.masked tells you if mytable is masked.
+		   Note that the attribute mytable.masked tells you if an astropy table "mytable" is masked.
 		   To make it even more foolproof, I systematically add a boolean column named
 		   prefix + "assoc_flag". True means that the source was found.
 		
@@ -83,12 +83,11 @@ Recent improvements (latest on top):
 
 To do:
 
-- finish ASSOC
-- add a public way to get the filepaths to the output files ?
+- check that all masked columns of ASSOC do indeed share the same mask.
 - implement _check_config()
 - better detection of SExtractor failures
 - implement raising Exceptions when SExtractor fails
-- implement CHECK IMAGE
+- implement CHECK IMAGE "helper" ?
 - give access to several conv and nnw settings (if needed)
 
 
@@ -439,9 +438,10 @@ class SExtractor():
 		
 		:returns: a dict containing the keys:
 		          
-			* **catfilepath**: the path to the sextractor output catalog file.
+			* **catfilepath**: the path to the sextractor output catalog file
 			* **table**: the astropy table of the output catalog (if returncat was not set to False)
-		
+			* **workdir**: the path to the workdir (all my internal files are there)
+			* **logfilepath**: the path to the SExtractor log file (in the workdir)
 		
 		Everything related to this particular image stays within this method, the SExtractor instance
 		(in particular config) is not modified !
@@ -538,6 +538,8 @@ class SExtractor():
 
 		# We return a dict. It always contains at least the path to the sextractor catalog:
 		output = {"catfilepath":self._get_cat_filepath(imgname), "workdir":self.workdir}
+		if writelog:
+			output["logfilepath"] = self._get_log_filepath(imgname)
 		
 		# And we read the output, if asked for:
 		if returncat:
