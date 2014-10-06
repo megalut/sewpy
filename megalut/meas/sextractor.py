@@ -60,7 +60,8 @@ The philosophy is the following:
 		   to which the new SExtractor columns will be appended.
 		   Those SExtractor columns might be **masked** columns (leading to a masked table),
 		   as some of your sources might not have been found by SExtractor.
-		   To make it foolproof, I also add this mask in form of a boolean column named
+		   Note that the attribute mytable.masked tells you if mytable is masked.
+		   To make it even more foolproof, I systematically add a boolean column named
 		   prefix + "assoc_flag". True means that the source was found.
 		
 		
@@ -466,16 +467,16 @@ class SExtractor():
 		# We prepare the ASSOC catalog file, if needed
 		if assoc_cat is not None:
 			
-			logger.info("I will run in ASSOC mode")	
+			logger.info("I will run in ASSOC mode, trying to find %i sources..." % (len(assoc_cat)))	
 			if "VECTOR_ASSOC(3)" not in self.params:
 				raise RuntimeError("To use the ASSOC helper, you have to add 'VECTOR_ASSOC(3)' to the params")
 			if assoc_xname not in assoc_cat.colnames or assoc_yname not in assoc_cat.colnames:
 				raise RuntimeError("I don't have columns %s or %s" % (assoc_xname, assoc_yname))
 			if "VECTOR_ASSOC_2" in assoc_cat.colnames:
 				raise RuntimeError("Do not give me an assoc_cat that already contains a column VECTOR_ASSOC_2")
-			for param in self.params:
+			for param in self.params + [prefix + "assoc_flag"]:
 				if prefix + param in assoc_cat.colnames: # This is not 100% correct, as some params might be vectors.
-					raise RuntimeError("Your assoc_cat already has a column named %s" % (prefix + param))
+					raise RuntimeError("Your assoc_cat already has a column named %s, fix this" % (prefix + param))
 			
 			self._write_assoc(cat=assoc_cat, xname=assoc_xname, yname=assoc_yname, imgname=imgname)
 		
@@ -533,15 +534,16 @@ class SExtractor():
 			logger.critical("Ouch, something seems wrong, check SExtractor log")
 		
 		endtime = datetime.now()
-		logger.info("Done, it took %.2f seconds." % ((endtime - starttime).total_seconds()))
+		logger.info("Running SExtractor done, it took %.2f seconds." % ((endtime - starttime).total_seconds()))
 
-		# We return a dict. First of all, it contains the path to the sextractor catalog:
-		output = {"catfilepath":self._get_cat_filepath(imgname)}
+		# We return a dict. It always contains at least the path to the sextractor catalog:
+		output = {"catfilepath":self._get_cat_filepath(imgname), "workdir":self.workdir}
 		
-		# And we read the output:
+		# And we read the output, if asked for:
 		if returncat:
 			if assoc_cat is None:
 				sextable = astropy.table.Table.read(self._get_cat_filepath(imgname), format="ascii.sextractor")
+				logger.info("Read %i objects from the SExtractor output catalog" % (len(sextable)))
 				self._add_prefix(sextable, prefix)
 				output["table"] = sextable
 				
@@ -553,6 +555,7 @@ class SExtractor():
 								
 				# We read in the SExtractor output:					
 				sextable = astropy.table.Table.read(self._get_cat_filepath(imgname), format="ascii.sextractor")
+				logger.info("Read %i objects from the SExtractor output catalog" % (len(sextable)))
 				self._add_prefix(sextable, prefix)
 				sextable.remove_columns(["VECTOR_ASSOC", "VECTOR_ASSOC_1"])
 			
@@ -564,41 +567,31 @@ class SExtractor():
 					uniq_col_name = "{table_name}_{col_name}"
 					)
 				
-				# This might return a **masked** table
-				if joined.masked:
-					logger.info("ASSOC join done, I could not find all your sources, my output is a masked table.")
-				else:
-					logger.info("ASSOC join done, I could find all your sources, my output is not masked.")
-				
-				
 				# This join does not mix the order, as the output is sorted according to our own VECTOR_ASSOC_2
 				
 				# We remove the last ASSOC column:
 				joined.remove_columns(["VECTOR_ASSOC_2"])
 				assert len(intable) == len(joined)
 				
-				# We add one simply-named column with a flag telling if the identification has worked.
-				if not joined.masked:
-					joined[prefix + "_assoc_flag"] = astropy.table.Column
 				
+				# The join might return a **masked** table.
+				# In any case, we add one simply-named column with a flag telling if the identification has worked.
 				
-				# First we check that all those astropy.table masks are indeed identical as they should :
+				if joined.masked:
+					logger.info("ASSOC join done, my output is a masked table.")
+					joined[prefix + "assoc_flag"] = joined[joined.colnames[-1]].mask == False
+					nfound = sum(joined[prefix + "assoc_flag"])
+					logger.info("I could find %i out of %i sources (%i are missing)" % (nfound, len(assoc_cat), len(assoc_cat)-nfound))
 				
-				
-				colswithmask = []
-				for colname in sextable.colnames:
-					print colname,sextable[colname].masked
-					if hasattr(sextable[colname], "mask"):
-						colswithmask.append(colname)
+				else:
+					logger.info("ASSOC join done, I could find all your sources, my output is not masked.")
+					joined[prefix + "assoc_flag"] = [True] * len(joined)
 					
-					#assert sextable[colname].mask == sexcolmask 
-				
-				
 				
 				output["table"] = joined
 		
 		return output
-		#sexcolmask = sextable[sextable.colnames[-1]].mask
+		
 		
 #	def destroy(self):
 #		"""
