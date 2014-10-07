@@ -579,8 +579,10 @@ class SExtractor():
 				
 				# We remove the last ASSOC column:
 				joined.remove_columns(["VECTOR_ASSOC_2"])
-				assert len(intable) == len(joined)
-				
+				#assert len(intable) == len(joined)
+				# More explicit:
+				if not len(intable) == len(joined):
+					raise RuntimeError("Problem with joined tables: intable has %i rows, joined has %i. %s %s" % (len(intable), len(joined), intable.colnames, joined.colnames))
 				
 				# The join might return a **masked** table.
 				# In any case, we add one simply-named column with a flag telling if the identification has worked.
