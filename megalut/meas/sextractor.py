@@ -116,6 +116,7 @@ import tempfile
 import re
 import copy
 from datetime import datetime
+import numpy as np
 
 import logging
 logger = logging.getLogger(__name__)
@@ -165,6 +166,8 @@ class SExtractor():
 		self.sexpath = sexpath
 		self.configfilepath = configfilepath
 		self.nice = nice
+		
+		logger.info("SExtractor version is %s" % (self.get_version()))
 		
 		# ... and the workdir
 		
@@ -582,7 +585,21 @@ class SExtractor():
 				logger.info("Read %i objects from the SExtractor output catalog" % (len(sextable)))
 				self._add_prefix(sextable, prefix)
 				sextable.remove_columns(["VECTOR_ASSOC", "VECTOR_ASSOC_1"])
-			
+				
+				# Due to what seems to be a bug in SExtractor (version 2.19.5 and earlier),
+				# we need to kick out "duplicated" (same VECTOR_ASSOC_2) rows.
+				# That's weird, as in principle we asked to keep the NEAREST !
+				sortedassoc = np.sort(sextable["VECTOR_ASSOC_2"].data)
+				duplassoc = list(np.unique(sortedassoc[sortedassoc[1:] == sortedassoc[:-1]]))
+				# The unique is here as there might be more than 2 identical numbers...
+				if len(duplassoc) > 0:
+					logger.critical("%i sources from the SExtractor catalog are strange duplicates (bug ?), I discard them." % (len(duplassoc)))
+					rowindices_to_remove = []
+					for row in sextable:
+						if row["VECTOR_ASSOC_2"] in duplassoc:
+							rowindices_to_remove.append(row.index)
+					sextable.remove_rows(rowindices_to_remove)
+							
 				# We merge the tables, keeping all entries of the "intable"
 				joined = astropy.table.join(intable, sextable,
 					join_type='left', keys='VECTOR_ASSOC_2',
