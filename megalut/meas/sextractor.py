@@ -515,6 +515,7 @@ class SExtractor():
 			popencmd.append(str(value))
 		
 		# And we run
+		logger.info("Starting SExtractor now, with niceness %s..." % (self.nice))
 		logger.debug("Running with command %s..." % (popencmd))
 		p = subprocess.Popen(popencmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		out, err = p.communicate()
