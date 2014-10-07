@@ -34,7 +34,7 @@ The philosophy is the following:
   that you want to analyse with the same params but a different config.
   Indeed you usually don't want to change params from image to image, but you might have to change
   the config (e.g., gain, seeing, ...).
-- When repeatedly calling run(), we avoid writing the SExtractor input files over and over again.
+- When repeatedly calling run(), we avoid writing the SExtractor input files to disk over and over again.
   Instead, param is written only once, and config settings are passed as command line arguments to
   the SExtractor executable, superseding the default config, which we take (if not told otherwise)
   as the output of "sextractor -d".
@@ -44,7 +44,9 @@ The philosophy is the following:
 
 .. warning:: When using *vector*-type params resulting in multiple columns (such as "FLUX_RADIUS(3)"
 	in the example above), do not put these in the last position of the params list, otherwise astropy
-	fails reading the catalog!
+	fails reading the catalog! This is probably due to the fact that the SExtractor header doesn't give
+	a hint that multiple columns are expected when a vector-type param comes last. A workaround would be
+	way too complicated.
 
 
 .. note:: 
