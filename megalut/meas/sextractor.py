@@ -34,10 +34,12 @@ The philosophy is the following:
   that you want to analyse with the same params but a different config.
   Indeed you usually don't want to change params from image to image, but you might have to change
   the config (e.g., gain, seeing, ...).
+- In the params list, you have to specify all the parameters that you want to be measured.
+- On the other hand, in the config dict, you only have to give those settings that deviate from
+  the *default*! We take as *default* the output of "sextractor -d" (if not told otherwise).
 - When repeatedly calling run(), we avoid writing the SExtractor input files to disk over and over again.
   Instead, param is written only once, and config settings are passed as command line arguments to
-  the SExtractor executable, superseding the default config, which we take (if not told otherwise)
-  as the output of "sextractor -d".
+  the SExtractor executable, superseding the default config.
   So to change config from image to image, simply edit se.config between calls of run().
 - There is special helper functionality for using ASSOC (see note below)
 
@@ -76,7 +78,7 @@ Recent improvements (latest on top):
 
 - better verbosity about masked output of ASSOC procedure
 - ASSOC helper implemented
-- now returns a dict of the run() info, such as the output astropy table, catfilepath, workdir, and logfilepath
+- run() now returns a dict containing several objects, such as the output astropy table, catfilepath, workdir, and logfilepath.
 - now also works with vector parameters such as MAG_APER(4)
 - possibility to "nice" SExtractor
 - a log file is written for every run() if not told otherwise
@@ -90,6 +92,7 @@ Recent improvements (latest on top):
 
 To do:
 
+- move "config" to run ?
 - check that all masked columns of ASSOC do indeed share the same mask.
 - implement _check_config()
 - better detection of SExtractor failures
@@ -99,7 +102,7 @@ To do:
 
 
 Note that several SExtractor wrappers for python can be found online.
-The code for this module mixes elements inspired by:
+The code of the present module contains elements inspired by:
 
 - previous MegaLUT, alipy, and cosmouline implementations
 - pysex from Nicolas Cantale
@@ -652,7 +655,9 @@ class SExtractor():
 
 
 	# Some class attributes:
-
+	# We give this fullparamtxt here as some earlier versions of sextractor are not able to spit it out.
+	# It's only used to check your params for typos, anyway.
+	
 	fullparamtxt = """
 #NUMBER                 Running object number                                     
 #EXT_NUMBER             FITS extension number                                     
