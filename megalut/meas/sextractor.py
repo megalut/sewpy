@@ -114,7 +114,6 @@ The code of the present module contains elements inspired by:
 
 
 import os
-import shutil
 import astropy
 import subprocess
 import tempfile
@@ -133,7 +132,7 @@ defaultconfig = {}
 
 
 class SExtractorError(Exception):
-    pass
+	pass
 
 
 class SExtractor():
@@ -273,7 +272,7 @@ class SExtractor():
 		"""
 		
 		if "PARAMETERS_NAME" in self.config.keys():
-			logger.info("OK, you specified your own PARAMETERS_NAME, I will use it.")
+			logger.info("You specified your own PARAMETERS_NAME, I will use it.")
 		else:
 			self.config["PARAMETERS_NAME"] = self._get_params_filepath()
 		
@@ -419,7 +418,7 @@ class SExtractor():
 
 		lines = []
 		for (number, row) in enumerate(cat):
-                        # Seems safe(r) to not use row.index but our own number.
+					# Seems safe(r) to not use row.index but our own number.
 			lines.append("%.3f\t%.3f\t%i\n" % (row[xname], row[yname], number))
 
 		lines = "".join(lines)
@@ -480,7 +479,7 @@ class SExtractor():
 		logger.debug("Using imgname %s..." % (imgname))		
 		
 		# We make a deep copy of the config, that we can modify with settings related to this particular
-                # image.
+				# image.
 		imgconfig = copy.deepcopy(self.config)
 		
 		# We set the catalog name :
@@ -627,7 +626,7 @@ class SExtractor():
 				
 				# The join might return a **masked** table.
 				# In any case, we add one simply-named column with a flag telling if the
-                                # identification has worked.
+								# identification has worked.
 				
 				if joined.masked:
 					logger.info("ASSOC join done, my output is a masked table.")
