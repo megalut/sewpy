@@ -10,12 +10,12 @@ Yet another attempt to build a reusable and transparent SExtractor wrapper, this
 
 Here is an illustrative example::
 
- from sextractor import SExtractor
- se = SExtractor(
+ from sewpy import SEW
+ sew = SEW(
 	params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"],
         config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"}
 	)
- out = se.run("myimage.fits")
+ out = sew.run("myimage.fits")
  print out["table"] # this is an astropy table.
 
 The primary aim of this module is to allow us to use SExtractor as if it would all just be 
@@ -135,7 +135,7 @@ class SExtractorError(Exception):
 	pass
 
 
-class SExtractor():
+class SEW():
 	"""
 	Holds together all the settings to run SExtractor executable on one or several images.
 	"""
