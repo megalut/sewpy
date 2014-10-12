@@ -29,7 +29,7 @@ python setup.py install --user
 
 For a system-wide install, remove the `--user`. More information about how to install python modules with distutil can be found [here](https://docs.python.org/2/install/index.html#install-index).
 
-Requirements are [astropy](http://www.astropy.org/) 0.4.2 or later, and obviously [SExtractor]() (`sewpy` does not require a specific version).
+Requirements are [astropy](http://www.astropy.org/) 0.4.2 or later, and obviously [SExtractor](http://www.astromatic.net/software/sextractor) (`sewpy` does not require a specific version).
 
 Documentation
 -------------
