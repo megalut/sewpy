@@ -22,10 +22,6 @@ defaultparams = ["XWIN_IMAGE", "YWIN_IMAGE", "AWIN_IMAGE", "BWIN_IMAGE", "THETAW
 defaultconfig = {}
 
 
-class SExtractorError(Exception):
-	pass
-
-
 class SEW():
 	"""
 	Holds together all the settings to run SExtractor executable on one or several images.
@@ -340,7 +336,7 @@ class SEW():
 
 		
 
-	def run(self, imgfilepath, imgname=None, assoc_cat=None, assoc_xname="x", assoc_yname="y",
+	def __call__(self, imgfilepath, imgname=None, assoc_cat=None, assoc_xname="x", assoc_yname="y",
                 returncat=True, prefix="", writelog=True):
 		"""
 		Runs SExtractor on a given image.
