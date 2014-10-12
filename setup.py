@@ -8,7 +8,7 @@ setup(
 	packages=['sewpy'],
 	description='Source Extractor Wrapper for Python',
 	long_description=open('README.md').read(),
-	author='MegaLUT',
+	author='The MegaLUT developers',
 	license='GPLv3',
 	url='http://github.com/megalut/sewpy'
 )
