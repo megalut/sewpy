@@ -1,1 +1,0 @@
-Search.setIndex({envversion:42,terms:{content:0,index:0,search:0,page:0},objtypes:{},objnames:{},filenames:["index","apidoc/sewpy"],titles:["Welcome to sewpy&#8217;s documentation!","sewpy module"],objects:{},titleterms:{welcom:0,sewpi:[0,1],modul:1,indic:0,tabl:0,document:0}})
