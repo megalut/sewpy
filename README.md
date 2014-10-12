@@ -4,8 +4,9 @@ The tiny `sewpy` module let's you run SExtractor as if it would all be native py
 
 ```python 
 import sewpy
-sew = sewpy.SEW(params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"])
-out = sew("myimage.fits", config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"})
+sew = sewpy.SEW(params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"],
+		config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"})
+out = sew("myimage.fits")
 print out["table"] # this is an astropy table.
 ```
 
