@@ -1,114 +1,5 @@
 """
-Yet another attempt to build a reusable and transparent SExtractor wrapper, this time
-
-- using only astropy (no astroasciidata or pyfits)
-- using logging
-- using tempfile
-- with support for easy use of ASSOC
-- not only with MegaLUT in mind
-
-
-Here is an illustrative example::
-
- from sewpy import SEW
- sew = SEW(
-	params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"],
-        config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"}
-	)
- out = sew.run("myimage.fits")
- print out["table"] # this is an astropy table.
-
-The primary aim of this module is to allow us to use SExtractor as if it would all just be 
-native python, without having to care about input and output files.
-But the wrapper also allows a more sophisticated use, with existing SExtractor input files,
-or revealing the output files.
-
-The philosophy is the following:
-
-- If you do not specify a workdir, I'll write all my required internal files somewhere in /tmp,
-  and you don't have to bother about this (it's done using the tempfile module).
-- "params" (a list) refers to the features that you want SExtractor to measure
-  (e.g., settings you find in "default.param").
-- "config" (a dict) refers to the settings (e.g., stuff you find in "default.sex").
-- A SExtractor instance ("se" in the example above) can well be reused for different images
-  that you want to analyse with the same params but a different config.
-  Indeed you usually don't want to change params from image to image, but you might have to change
-  the config (e.g., gain, seeing, ...).
-- In the params list, you have to specify all the parameters that you want to be measured.
-- On the other hand, in the config dict, you only have to give those settings that deviate from
-  the *default*! We take as *default* the output of "sextractor -d" (if not told otherwise).
-- When repeatedly calling run(), we avoid writing the SExtractor input files to disk over and over again.
-  Instead, param is written only once, and config settings are passed as command line arguments to
-  the SExtractor executable, superseding the default config.
-  So to change config from image to image, simply edit se.config between calls of run().
-- There is special helper functionality for using ASSOC (see note below)
-
-
-.. warning:: When using *vector*-type params resulting in multiple columns (such as "FLUX_RADIUS(3)"
-	in the example above), do not put these in the last position of the params list, otherwise astropy
-	fails reading the catalog! This is probably due to the fact that the SExtractor header doesn't give
-	a hint that multiple columns are expected when a vector-type param comes last. A workaround would be
-	way too complicated.
-
-
-.. note:: 
-		   
-		The **ASSOC helper** assists you in measuring galaxies from an existing input catalog,
-		instead of just making a new catalog of all sources. In summary, you pass an existing input
-		catalog to run(), and you'll get this same catalog as output, but with the new columns
-		corresponding to the SExtractor params appended.
-		
-		To use the ASSOC helper:
-
-		- Add "VECTOR_ASSOC(3)" to your params (at the beginning, not at the end, of the params list).
-		- Add for instance {"ASSOC_RADIUS":10.0, "ASSOC_TYPE":"NEAREST"} to your config.
-		  These values are the defaults used if you don't specify anything.
-		- give the relevant arguments (assoc_cat, assoc_xname, assoc_yname) when calling run().
-		   
-		The output of run() will contain an astropy table, with the same rows as assoc_cat, but 
-		to which the new SExtractor columns will be appended.
-		Those SExtractor columns might be **masked** columns (leading to a masked table),
-		as some of your sources might not have been found by SExtractor.
-		Note that the attribute mytable.masked tells you if an astropy table "mytable" is masked.
-		To make it even more foolproof, I systematically add a boolean column named
-		prefix + "assoc_flag". True means that the source was found.
-		
-		
-Recent improvements (latest on top):
-
-- better verbosity about masked output of ASSOC procedure
-- ASSOC helper implemented
-- run() now returns a dict containing several objects, such as the output astropy table, catfilepath, workdir, and logfilepath.
-- now also works with vector parameters such as MAG_APER(4)
-- possibility to "nice" SExtractor
-- a log file is written for every run() if not told otherwise
-- filenames change according to FITS image file name where required
-- but you can also pass an "imgname" argument to run, and this will be used instead.
-- params and config files are written only once, as discussed
-- appropriate warnings and behaviour when a workdir already exists, or when you rerun on the same file
-- possibility to use existing param / config / conv / nnw files
-- run() returns either the catalog, or the filepath to the catalog
-
-
-To do:
-
-- move "config" to run ?
-- check that all masked columns of ASSOC do indeed share the same mask.
-- implement _check_config()
-- better detection of SExtractor failures
-- implement raising Exceptions when SExtractor fails
-- implement CHECK IMAGE "helper" ?
-- give access to several conv and nnw settings (if needed)
-
-
-Note that several SExtractor wrappers for python can be found online.
-The code of the present module contains elements inspired by:
-
-- previous MegaLUT, alipy, and cosmouline implementations
-- pysex from Nicolas Cantale
-- sextractor.py by Laurent Le Guillou (from the "forgotten" COSMOGRAIL pipeline)
-- pysextractor by Nicolas Gruel
-
+	
 
 """
 
@@ -161,6 +52,14 @@ class SEW():
 		
 		To use an existing SExtractor param-, conv-, or nnw-file, simply specify these in the config
                 dict, using the appropriate SExtractor keys (PARAMETERS_NAME, FILTER_NAME, ...)
+		
+		.. warning:: When using *vector*-type params resulting in multiple columns (such as "FLUX_RADIUS(3)"
+			in the example above), do not put these in the last position of the params list, otherwise astropy
+			fails reading the catalog! This is probably due to the fact that the SExtractor header doesn't give
+			a hint that multiple columns are expected when a vector-type param comes last. A workaround would be
+			way too complicated.
+
+		
 		
 		"""
 
