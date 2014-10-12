@@ -1,11 +1,13 @@
 """
-	
+
+Add license, author, and version stuff here...
 
 """
 
 
 import os
 import astropy
+import astropy.table
 import subprocess
 import tempfile
 import re
