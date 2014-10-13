@@ -7,10 +7,14 @@ sys.path.insert(0, os.path.abspath('../'))
 import sewpy
 
 sew = sewpy.SEW(
-		params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"],
-		config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"}
+		params=["X_IMAGE", "Y_IMAGE", "FLUX_APER(3)", "FLAGS"],
+		config={"DETECT_MINAREA":10, "PHOT_APERTURES":"5, 10, 20"}
 	)
-
+# By default, this assumes that SExtractor can be called as "sex"
+# If this is not the case, or if the executable is not in your path,
+# specify the path by adding the argument sexpath="/path/to/sextractor"
+# to the above instantiation.
+	
 out = sew("image.fits")
 
 print out["table"] # This is an astropy table.
