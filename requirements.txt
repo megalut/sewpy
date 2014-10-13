@@ -1,1 +1,1 @@
-pip install --no-deps astropy
+astropy==0.4.2
