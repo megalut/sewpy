@@ -1,6 +1,11 @@
 """
 
-Add license, author, and version stuff here...
+Sewpy uses the logging module.
+To see a detailed log of what is going on, insert this into your script::
+
+	import logging
+	logging.basicConfig(format='(levelname)s: %(name)s(%(funcName)s): %(message)s', level=logging.DEBUG)
+
 
 """
 
@@ -81,7 +86,7 @@ class SEW():
 				logger.info("Making new SExtractor workdir '%s'..." % (workdir))
 				os.makedirs(workdir)
 		else:
-			self.workdir = tempfile.mkdtemp(prefix='sextractor_dot_py_workdir_')
+			self.workdir = tempfile.mkdtemp(prefix='sewpy_workdir_')
 			self.tmp = True
 		
 		self._clean_workdir()
@@ -114,10 +119,14 @@ class SEW():
 		
 		:returns: a string (e.g. '2.4.4')
 		"""
-		p = subprocess.Popen([self.sexpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		try:
+			p = subprocess.Popen([self.sexpath], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		except:
+			raise RuntimeError("Could not run SExtractor. Is the path '%s' correct ? If not, specify sexpath='/path/to/sextractor'" % self.sexpath)
 		out, err = p.communicate()
 		version_match = re.search("[Vv]ersion ([0-9\.])+", err)
-		assert version_match is not False
+		if version_match is False:
+			raise RuntimeError("Could not determine SExctractor version, check the output of running '%s'" % (self.sexpath))
 		version = str(version_match.group()[8:])
 		assert len(version) != 0
 		return version
@@ -125,9 +134,9 @@ class SEW():
 	
 	def __str__(self):
 		"""
-		Trivial
+		A string summary representing the instance
 		"""
-		return "SExtractor in %s" % (self.workdir)
+		return "'SEW object with workdir %s'" % (self.workdir)
 	
 	
 	def _check_params(self):
@@ -459,6 +468,10 @@ class SEW():
 		endtime = datetime.now()
 		logger.info("Running SExtractor done, it took %.2f seconds." % \
                                 ((endtime - starttime).total_seconds()))
+
+		# Let's check if this worked.
+		if not os.path.isfile(self._get_cat_filepath(imgname)):
+			raise RuntimeError("It seems that SExtractor did not write the file '%s', check log." % (self._get_cat_filepath(imgname)))
 
 		# We return a dict. It always contains at least the path to the sextractor catalog:
 		output = {"catfilepath":self._get_cat_filepath(imgname), "workdir":self.workdir}
