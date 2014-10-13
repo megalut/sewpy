@@ -17,7 +17,7 @@ or reveal the output files. The module
 - uses `tempfile` to hide all input and output files (if you don't care about them)
 - has some convenience functionality to use SExtractor's `ASSOC` process
 
-To learn more about how to use ``sewpy``, the best is to have a look at the scripts in the ``examples`` directory. You can also view the full API documentation, hosted at [http://sewpy.readthedocs.org](sewpy.readthedocs.org).
+To learn more about how to use ``sewpy``, the best is to have a look at the scripts in the ``examples`` directory. You can also view the full API documentation, hosted at [sewpy.readthedocs.org](http://sewpy.readthedocs.org).
 
 
 ## Installation
