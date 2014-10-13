@@ -4,8 +4,9 @@ The tiny `sewpy` module let's you run [SExtractor](http://www.astromatic.net/sof
 
 ```python 
 import sewpy
-sew = sewpy.SEW(params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"])
-out = sew("myimage.fits", config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"})
+sew = sewpy.SEW(params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"],
+		config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"})
+out = sew("myimage.fits")
 print out["table"] # this is an astropy table.
 ```
 
@@ -17,12 +18,19 @@ or reveal the output files. The module
 - uses `tempfile` to hide all input and output files (if you don't care about them)
 - has some convenience functionality to use SExtractor's `ASSOC` process
 
+
 To learn more about how to use ``sewpy``, the best is to have a look at the scripts in the ``examples`` directory. You can also view the full API documentation, hosted at [sewpy.readthedocs.org](http://sewpy.readthedocs.org).
 
 
 ## Installation
 
-Clone or download this repository, `cd` into it, and 
+The requirements are [astropy](http://www.astropy.org/) (version 0.4.2 or later), and obviously [SExtractor](http://www.astromatic.net/software/sextractor) (`sewpy` does not require a specific version).
+
+To get `sewpy`, clone this repository, or click [here](https://github.com/megalut/sewpy/tarball/master) to download a tarball of the latest version. You have (at least) two options to install the module:
+
+#### Method 1, if you just want to use the module
+
+Extract the tarball if required, `cd` into it, and 
 
 ```
 python setup.py install --user
@@ -30,9 +38,18 @@ python setup.py install --user
 
 For a system-wide install, remove the `--user`. More information about how to install python modules with distutil can be found [here](https://docs.python.org/2/install/index.html#install-index).
 
-Requirements are [astropy](http://www.astropy.org/) 0.4.2 or later, and obviously [SExtractor](http://www.astromatic.net/software/sextractor) (`sewpy` does not require a specific version).
+#### Method 2, if you intend to develop the module
+
+A simple solution is to add your local clone of `sewpy` to your python path, for instance by modifying your `.bash_profile` or equivalent:
+
+```
+export PYTHONPATH=${PYTHONPATH}:/path/to/megalut-sewpy-1.0
+```
+
 
 ## Documentation
+
+
 
 ### General philosophy (to be rewritten)
 
