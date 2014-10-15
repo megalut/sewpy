@@ -1,8 +1,10 @@
 Source Extractor Wrapper for Python
 ===================================
 
-The tiny ``sewpy`` module let's you run `SExtractor <http://www.astromatic.net/software/sextractor>`_ as if it would all be native python... ::
- 
+The tiny ``sewpy`` module let's you run `SExtractor <http://www.astromatic.net/software/sextractor>`_ as if it would all be native python...
+
+.. code-block:: python 
+	
 	import sewpy
 	sew = sewpy.SEW(params=["X_IMAGE", "Y_IMAGE", "FLUX_RADIUS(3)", "FLAGS"],
 		config={"DETECT_MINAREA":10, "PHOT_FLUXFRAC":"0.3, 0.5, 0.8"})
