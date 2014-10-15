@@ -1,6 +1,6 @@
 # Source Extractor Wrapper for Python
 
-The tiny `sewpy` module let's you run SExtractor as if it would all be native python... 
+The tiny `sewpy` module let's you run [SExtractor](http://www.astromatic.net/software/sextractor) as if it would all be native python... 
 
 ```python 
 import sewpy
@@ -11,12 +11,15 @@ print out["table"] # this is an astropy table.
 ```
 
 ... but also allows for a more sophisticated use, for instance if you want to use existing SExtractor input files,
-or reveal the output files. This module
+or reveal the output files. The module
 
 - is based on `astropy` (instead of astroasciidata)
 - uses standard `logging` (no prints)
 - uses `tempfile` to hide all input and output files (if you don't care about them)
 - has some convenience functionality to use SExtractor's `ASSOC` process
+
+
+To learn more about how to use ``sewpy``, the best is to have a look at the scripts in the ``examples`` directory. You can also view the full API documentation, hosted at [sewpy.readthedocs.org](http://sewpy.readthedocs.org).
 
 
 ## Installation
