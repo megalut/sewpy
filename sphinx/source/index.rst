@@ -3,20 +3,31 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to sewpy's API documentation
-====================================
+
+.. include:: ../../README.rst
+	:end-before: Documentation 
+
+Your are viewing the documentation of ``sewpy``. The code, including the sources of the present documentation, is hosted on  `github.com/megalut/sewpy <https://github.com/megalut/sewpy>`_.
+
+
+Contents
+--------
+
+.. toctree::
+	:maxdepth: 2
+	
+	installation
+	manual
+	api
+	howtodoc
+
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
 
 Last build of this documentation : |today|.
-
-To generate this page, go into the ``sewpy/sphinx`` directory, run ``make html`` (no need for apidoc), and open ``build/html/index.html``.
-
-
-The sewpy module
-----------------
-
-.. automodule:: sewpy.sewpy
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 

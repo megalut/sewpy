@@ -18,8 +18,10 @@ The tiny ``sewpy`` module let's you run `SExtractor <http://www.astromatic.net/s
 * uses ``tempfile`` to hide all input and output files (except if you care about them)
 * has some convenience functionality to use SExtractor's ``ASSOC`` process
 
+Documentation
+-------------
 
-To learn more about how to install and use ``sewpy``, proceed to its `documentation <http://sewpy.readthedocs.org>`_.
+To learn more about how to install and use ``sewpy``, proceed to its `documentation <http://sewpy.readthedocs.org>`_.**
 
 
 

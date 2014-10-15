@@ -1,10 +1,32 @@
 """
+sewpy: Source Extractor Wrapper for Python
 
-Sewpy uses the logging module.
-To see a detailed log of what is going on, insert this into your script::
 
-	import logging
-	logging.basicConfig(format='(levelname)s: %(name)s(%(funcName)s): %(message)s', level=logging.DEBUG)
+Recent improvements (latest on top):
+
+- better verbosity about masked output of ASSOC procedure
+- ASSOC helper implemented
+- run() now returns a dict containing several objects, such as the output astropy table, catfilepath, workdir, and logfilepath.
+- now also works with vector parameters such as MAG_APER(4)
+- possibility to "nice" SExtractor
+- a log file is written for every run() if not told otherwise
+- filenames change according to FITS image file name where required
+- but you can also pass an "imgname" argument to run, and this will be used instead.
+- params and config files are written only once, as discussed
+- appropriate warnings and behaviour when a workdir already exists, or when you rerun on the same file
+- possibility to use existing param / config / conv / nnw files
+- run() returns either the catalog, or the filepath to the catalog
+
+
+To do:
+
+- move "config" to run ?
+- check that all masked columns of ASSOC do indeed share the same mask.
+- implement _check_config()
+- better detection of SExtractor failures
+- implement raising Exceptions when SExtractor fails
+- implement CHECK IMAGE "helper" ?
+- give access to several conv and nnw settings (if needed)
 
 
 """
