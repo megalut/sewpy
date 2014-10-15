@@ -21,7 +21,7 @@ The tiny ``sewpy`` module let's you run `SExtractor <http://www.astromatic.net/s
 Documentation
 -------------
 
-To learn more about how to install and use ``sewpy``, proceed to its `documentation <http://sewpy.readthedocs.org>`_.**
+To learn more about how to install and use ``sewpy``, proceed to its `documentation <http://sewpy.readthedocs.org>`_.
 
 
 
