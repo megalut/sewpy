@@ -12,7 +12,7 @@ import sewpy
 
 sew = sewpy.SEW(
 		params=["X_IMAGE", "Y_IMAGE", "FLUX_APER(3)", "FLAGS"],
-		config={"DETECT_MINAREA":10, "PHOT_APERTURES":"5, 10, 20"},
+		config={"DETECT_MINAREA":10, "PHOT_APERTURES":"5,10,20"},
 		sexpath="sex"
 	)
 # By default, this assumes that SExtractor can be called as "sex"
