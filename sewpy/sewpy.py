@@ -111,8 +111,10 @@ class SEW():
 			self.workdir = tempfile.mkdtemp(prefix='sewpy_workdir_')
 			self.tmp = True
 		
-		self._clean_workdir()
 
+		#self._clean_workdir()
+		# No, don't clean it ! This is an obvious race conditions when several processes use the same workdir !
+		# Commenting this is just a quick fix, we need to clean this up.
 		
 		# ... and the params:
 		
