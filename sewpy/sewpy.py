@@ -460,7 +460,7 @@ class SEW():
 		# We add the current state of config
 		for (key, value) in imgconfig.items():
 			popencmd.append("-"+str(key))
-			popencmd.append(str(value))
+			popencmd.append(str(value).replace(' ',''))
 		
 		# And we run
 		logger.info("Starting SExtractor now, with niceness %s..." % (self.nice))
