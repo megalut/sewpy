@@ -5,7 +5,7 @@
 
 
 .. include:: ../../README.rst
-	:end-before: Documentation 
+	:end-before: Installation
 
 Your are viewing the documentation of ``sewpy``. The code, including the sources of the present documentation, is hosted on  `github.com/megalut/sewpy <https://github.com/megalut/sewpy>`_.
 
