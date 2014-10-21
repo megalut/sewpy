@@ -20,22 +20,20 @@ Why `yet <https://pypi.python.org/pypi/pysex/>`_ `another <https://gitorious.org
 * uses ``tempfile`` to hide all input and output files, *except if you want to see them*
 * has some convenience functionality to use SExtractor's ``ASSOC`` process (give me an input catalog, and I append columns with SExtractor measurements to it).
 
-Installation
--------------
+The **demos** in the ``examples`` directory can be run without installing sewpy, and provide a quick overview. 
 
-For most systems, install is a simple command
+Installation (in short)
+-----------------------
+
 .. code-block:: bash
-
+	
 	python setup.py install --user
-
-... where the ``--user`` is added if you don't have sudo access to your system.
-
-To learn more about installation options, proceed to its `documentation <http://sewpy.readthedocs.org/en/latest/installation.html>`_.
+	
 
 Documentation
 -------------
 
-To learn more about how to use ``sewpy``, proceed to its `documentation <http://sewpy.readthedocs.org>`_.
+To learn more about how to install and use ``sewpy``, proceed to its `documentation <http://sewpy.readthedocs.org>`_.
 
 
 
