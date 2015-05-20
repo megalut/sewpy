@@ -103,7 +103,8 @@ class SEW():
 			self.workdir = workdir
 			self.tmp = False
 			if os.path.isdir(workdir):
-				logger.warning("SExtractor workdir '%s' exists, be careful! I will (maybe silently) delete or overwrite stuff." % (workdir))	
+				#logger.warning("SExtractor workdir '%s' exists, be careful! I will (maybe silently) delete or overwrite stuff." % (workdir))	
+				pass
 			else:
 				logger.info("Making new SExtractor workdir '%s'..." % (workdir))
 				os.makedirs(workdir)
