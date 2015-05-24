@@ -4,6 +4,7 @@ sewpy: Source Extractor Wrapper for Python
 
 Recent improvements (latest on top):
 
+- new loglevel option to adjust sewpy's overall "verbosity" on instantiation.
 - better verbosity about masked output of ASSOC procedure
 - ASSOC helper implemented
 - run() now returns a dict containing several objects, such as the output astropy table, catfilepath, workdir, and logfilepath.
@@ -56,7 +57,7 @@ class SEW():
 	Holds together all the settings to run SExtractor executable on one or several images.
 	"""
 	
-	def __init__(self, workdir=None, sexpath="sex", params=None, config=None, configfilepath=None, nice=None):
+	def __init__(self, workdir=None, sexpath="sex", params=None, config=None, configfilepath=None, nice=None, loglevel=None):
 		"""
 		All arguments have default values and are optional.
 		
@@ -73,7 +74,15 @@ class SEW():
 		:type config: dict
 		:param configfilepath: specify this if you want me to use an existing SExtractor config file as
                         "default" (instead of the sextractor -d one)
-		:param nice: niceness with which I should run SExtractor
+		:param nice: niceness with which I should run SExtractor. Use e.g. ``19`` for set lowest priority.
+		:type nice: int
+		
+		:param loglevel: verbosity, e.g. the python-level logging threshold for the sewpy module logger.
+			For example, set this to "WARNING" and sewpy will no longer log simple INFOs.
+			Choices are "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL". 
+			To disable logging, set ``loglevel="CRITICAL"``
+		:type loglevel: string or int or logging.level...
+		
 		
 		To use an existing SExtractor param-, conv-, or nnw-file, simply specify these in the config
                 dict, using the appropriate SExtractor keys (PARAMETERS_NAME, FILTER_NAME, ...)
@@ -88,6 +97,10 @@ class SEW():
 		
 		"""
 
+		# We start by setting the log "verbosity":
+		if loglevel != None:
+			logger.setLevel(loglevel)
+		
 		
 		# We set up the trivial things:
 		
@@ -214,7 +227,7 @@ class SEW():
 		
 		
 		if "CATALOG_NAME" in self.config.keys():
-			logger.critical("You specified your own CATALOG_NAME, but I will *NOT* use it !")
+			logger.warning("You specified your own CATALOG_NAME, but I will *NOT* use it !")
 			del self.config["CATALOG_NAME"]
 		
 
@@ -403,11 +416,14 @@ class SEW():
 
 		starttime = datetime.now()
 		
+		# Let's first check if the image file exists.
+		if not os.path.exists(imgfilepath):
+			raise IOError("The image file %s does not exist." % imgfilepath)
 		logger.info("Preparing to run SExtractor on %s..." % imgfilepath)
 
 		if imgname == None:
 			imgname = os.path.splitext(os.path.basename(imgfilepath))[0]
-		logger.debug("Using imgname %s..." % (imgname))		
+		logger.debug("Using imgname '%s'..." % (imgname))		
 		
 		# We make a deep copy of the config, that we can modify with settings related to this particular
 		# image.
@@ -488,7 +504,7 @@ class SEW():
 		logger.info(err)
 		
 		if not "All done" in err:
-			logger.critical("Ouch, something seems wrong, check SExtractor log")
+			logger.warning("Ouch, something seems wrong, check SExtractor log: %s" % self._get_log_filepath(imgname))
 		
 		endtime = datetime.now()
 		logger.info("Running SExtractor done, it took %.2f seconds." % \
@@ -496,7 +512,7 @@ class SEW():
 
 		# Let's check if this worked.
 		if not os.path.isfile(self._get_cat_filepath(imgname)):
-			raise RuntimeError("It seems that SExtractor did not write the file '%s', check log." % (self._get_cat_filepath(imgname)))
+			raise RuntimeError("It seems that SExtractor did not write the file '%s'. Check SExtractor log: %s" % (self._get_cat_filepath(imgname), self._get_log_filepath(imgname)))
 
 		# We return a dict. It always contains at least the path to the sextractor catalog:
 		output = {"catfilepath":self._get_cat_filepath(imgname), "workdir":self.workdir}
@@ -532,7 +548,7 @@ class SEW():
 				duplassoc = list(np.unique(sortedassoc[sortedassoc[1:] == sortedassoc[:-1]]))
 				# The unique is here as there might be more than 2 identical numbers...
 				if len(duplassoc) > 0:
-					logger.critical("%i sources from the SExtractor catalog are strange duplicates (bug ?), I discard them." % (len(duplassoc)))
+					logger.warning("%i sources from the SExtractor catalog are strange duplicates (bug ?), I discard them." % (len(duplassoc)))
 					rowindices_to_remove = []
 					for row in sextable:
 						if row["VECTOR_ASSOC_2"] in duplassoc:
