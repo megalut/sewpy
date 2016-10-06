@@ -42,7 +42,7 @@ corresponding to the SExtractor params appended.
 
 To use the ASSOC helper:
 
-* Add ``VECTOR_ASSOC(3)`` to your params (at the beginning, not at the end, of the params list).
+* Add ``VECTOR_ASSOC(3)`` to your params (The following is valid only for Astropy v1.1.2 and prior: at the beginning, not at the end, of the params list).
 * Add for instance ``{"ASSOC_RADIUS":10.0, "ASSOC_TYPE":"NEAREST"}`` to your config.
   These values are the defaults used if you don't specify anything.
 * Give the relevant arguments (``assoc_cat, assoc_xname, assoc_yname``) when calling.
