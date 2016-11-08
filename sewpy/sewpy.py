@@ -162,7 +162,7 @@ class SEW():
 		except:
 			raise RuntimeError("Could not run SExtractor. Is the path '%s' correct ? If not, specify sexpath='/path/to/sextractor'" % self.sexpath)
 		out, err = p.communicate()
-		version_match = re.search("[Vv]ersion ([0-9\.])+", err)
+		version_match = re.search("[Vv]ersion ([0-9\.])+", err.decode(encoding='UTF-8'))
 		if version_match is False:
 			raise RuntimeError("Could not determine SExctractor version, check the output of running '%s'" % (self.sexpath))
 		version = str(version_match.group()[8:])
@@ -319,7 +319,7 @@ class SEW():
 				logger.warning("Ouch, SExtractor complains :")
 				logger.warning(err)
 			f = open(self._get_config_filepath(), 'w')
-			f.write(out)
+			f.write(out.decode(encoding='UTF-8'))
 			f.close()
 			logger.debug("Wrote %s" % (self._get_config_filepath()))
 		else:
@@ -870,16 +870,16 @@ class SEW():
 			logfile.write("\n\nA nicer view of the config:\n")
 			logfile.write("\n".join(["%30s : %30s" % (str(key), str(value)) for (key, value) in imgconfig.items()]))
 			logfile.write("\n\n####### stdout #######\n")
-			logfile.write(out)
+			logfile.write(out.decode(encoding='UTF-8'))
 			logfile.write("\n####### stderr #######\n")
-			logfile.write(err)
+			logfile.write(err.decode(encoding='UTF-8'))
 			logfile.write("\n")
 			logfile.close()
 			
 		logger.info("SExtractor stderr:")
 		logger.info(err)
 		
-		if not "All done" in err:
+		if not "All done" in err.decode(encoding='UTF-8'):
 			logger.warning("Ouch, something seems wrong, check SExtractor log: %s" % self._get_log_filepath(imgname))
 		
 		endtime = datetime.now()
