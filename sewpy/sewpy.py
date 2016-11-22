@@ -930,8 +930,13 @@ class SEW():
 						if row["VECTOR_ASSOC_2"] in duplassoc:
 							rowindices_to_remove.append(row.index)
 					sextable.remove_rows(rowindices_to_remove)
+					
+				if len(sextable) == 0:
+					raise RuntimeError("SExtractor has returned no ASSOC match")
 							
 				# We merge the tables, keeping all entries of the "intable"
+				print len( intable)
+				print len(sextable)
 				joined = astropy.table.join(intable, sextable,
 					join_type='left', keys='VECTOR_ASSOC_2',
 					 # raises an error in case of metadata conflict.
