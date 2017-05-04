@@ -16,6 +16,7 @@ The tiny ``sewpy`` module let's you run `SExtractor <http://www.astromatic.net/s
 Why `yet <https://pypi.python.org/pypi/pysex/>`_ `another <https://gitorious.org/pysextractor>`_ SExtractor wrapper ? Because we needed one that:
 
 * is based on `astropy <http://www.astropy.org>`_ (in particular ``astropy.table``),
+* works with both python 2 and 3,
 * uses standard ``logging`` (and also logs SExtractor's stdout & stderr to file),
 * uses ``tempfile`` to hide all input and output files, *except if you want to see them*
 * has some convenience functionality to use SExtractor's ``ASSOC`` process (give me an input catalog, and I append columns with SExtractor measurements to it).
