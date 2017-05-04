@@ -1327,5 +1327,5 @@ class SEW():
 """
 
 	# We turn this text block into a list of the parameter names:
-	fullparamlist = map(lambda s: s[1:-1], re.compile("#\w*\s").findall(fullparamtxt))
+	fullparamlist = list(map(lambda s: s[1:-1], re.compile("#\w*\s").findall(fullparamtxt)))
 
