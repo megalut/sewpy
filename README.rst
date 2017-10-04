@@ -1,7 +1,7 @@
 Source Extractor Wrapper for Python
 ===================================
 
-The tiny ``sewpy`` module let's you run `SExtractor <http://www.astromatic.net/software/sextractor>`_ as if it would all be native python...
+The tiny ``sewpy`` module lets you run `SExtractor <http://www.astromatic.net/software/sextractor>`_ as if it would all be native python...
 
 .. code-block:: python 
 	
