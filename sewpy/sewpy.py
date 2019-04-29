@@ -921,7 +921,9 @@ class SEW():
 				# we need to kick out "duplicated" (same VECTOR_ASSOC_2) rows.
 				# That's weird, as in principle we asked to keep the NEAREST !
 				sortedassoc = np.sort(sextable["VECTOR_ASSOC_2"].data)
-				duplassoc = list(np.unique(sortedassoc[sortedassoc[1:] == sortedassoc[:-1]]))
+				duplboolindices = sortedassoc[1:] == sortedassoc[:-1]
+				duplboolindices = np.append(duplboolindices, False)
+				duplassoc = list(np.unique(sortedassoc[duplboolindices]))
 				# The unique is here as there might be more than 2 identical numbers...
 				if len(duplassoc) > 0:
 					logger.warning("%i sources from the SExtractor catalog are strange duplicates (bug ?), I discard them." % (len(duplassoc)))
@@ -933,7 +935,13 @@ class SEW():
 					
 				if len(sextable) == 0:
 					raise RuntimeError("SExtractor has returned no ASSOC match")
-							
+				
+				#print intable
+				#print sextable
+				#joined = astropy.table.join(intable, sextable, keys='VECTOR_ASSOC_2')
+				#print joined
+				#exit()	
+				
 				# We merge the tables, keeping all entries of the "intable"
 				joined = astropy.table.join(intable, sextable,
 					join_type='left', keys='VECTOR_ASSOC_2',
